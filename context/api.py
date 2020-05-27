@@ -37,6 +37,7 @@ InflectedForm = namedtuple("InflectedForm",
 # TODO: improve explanation of the WordUsageExample in docstrings
 # TODO: add docstrings for undocumented functions
 # TODO: convert part of speech from short form to long (e.g. "v." -> "verb")
+# TODO: maybe make a special object which contains both translation example and highlighted indexes
 
 def find_highlighted_idxs(soup, tag):
     """Finds indexes of the parts of the soup surrounded by a particular HTML tag
@@ -103,6 +104,12 @@ class ReversoContextAPI(object):
         return False
 
     def get_translations(self):
+        """Gets list of translations for the word (on the website you can find it just before the examples).
+
+        Returns:
+            A list of Translation namedtuples.
+        """
+
         def fetch_inflected_forms(json):
             inflected_forms = []
             for form in json:
@@ -169,7 +176,6 @@ class ReversoContextAPI(object):
 
 # A simple usage example
 if __name__ == "__main__":
-
     def insert_char(string, index, char):
         """Inserts character into a string.
 
@@ -215,6 +221,9 @@ if __name__ == "__main__":
         return s
 
 
+    print("Reverso.Context API usage example")
+
+    print()
     api = ReversoContextAPI(
         input("Enter the source text to search... "),
         input("Enter the target text to search (optional)... "),
@@ -223,10 +232,15 @@ if __name__ == "__main__":
     )
 
     print()
-    results = api.get_examples_pair_by_pair()
-    for wue in results:
-        source_text, target_text, source_highlighted, target_highlighted = wue
+    print("Translations:")
+    for source_word, translation, frequency, part_of_speech, inflected_forms in api.get_translations():
+        print(source_word, "==", translation, frequency, part_of_speech, ("Inflected forms: " + ", ".join(
+            map(lambda iform: str(iform.translation), inflected_forms)) if inflected_forms else None))
 
+    print()
+    print("Word Usage Examples:")
+    results = api.get_examples_pair_by_pair()
+    for source_text, target_text, source_highlighted, target_highlighted in results:
         shift = 0
         for start, end in source_highlighted:
             source_text = highlight_string(source_text, start, end, shift)
@@ -237,4 +251,4 @@ if __name__ == "__main__":
             target_text = highlight_string(target_text, start, end, shift)
             shift += 2
 
-        print(source_text, "=", target_text)
+        print(source_text, "==", target_text)

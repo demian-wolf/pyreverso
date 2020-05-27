@@ -4,18 +4,39 @@ import json
 from bs4 import BeautifulSoup
 import requests
 
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0",
     "Content-Type": "application/json; charset=UTF-8"
 }
 
-LANG_NAMES = {"en": "english",
-              "ru": "russian", }  # TODO: write for all available languages
+LANG_NAMES = {"ar": "arabic",
+              "de": "german",
+              "en": "english",
+              "es": "spanish",
+              "fr": "french",
+              }  # TODO: write for all available languages (if it would be necessary)
+
+PARTS_OF_SPEECH = {"adj.": "adjective",
+                   "adv.": "adverb",
+                   "n.": "noun",
+                   "v.": "verb",
+                   None: None
+                   }
 
 WordUsageExample = namedtuple("WordUsageExample",
                               ("source_text", "target_text", "source_highlighted", "target_highlighted"))
 
+Translation = namedtuple("Translation",
+                         ("source_word", "translation", "frequency", "part_of_speech", "inflected_forms"))
+
+InflectedForm = namedtuple("InflectedForm",
+                           ("translation", "frequency"))
+
+
 # TODO: improve explanation of the WordUsageExample in docstrings
+# TODO: add docstrings for undocumented functions
+# TODO: convert part of speech from short form to long (e.g. "v." -> "verb")
 
 def find_highlighted_idxs(soup, tag):
     """Finds indexes of the parts of the soup surrounded by a particular HTML tag
@@ -81,7 +102,25 @@ class ReversoContextAPI(object):
             return remove_npage(self.data) == remove_npage(other.data) and self.parser == other.parser
         return False
 
-    def get_page(self, npage):
+    def get_translations(self):
+        def fetch_inflected_forms(json):
+            inflected_forms = []
+            for form in json:
+                inflected_forms.append(InflectedForm(form["term"], form["alignFreq"]))
+            return inflected_forms
+
+        translations_json = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
+                                          data=json.dumps(self.data)).json()["dictionary_entry_list"]
+        translations = []
+        for translation in translations_json:
+            translations.append(
+                Translation(self.data["source_text"], translation["term"], translation["alignFreq"],
+                            translation["pos"],
+                            fetch_inflected_forms(translation["inflectedForms"])))
+
+        return translations
+
+    def get_examples_page_json(self, npage):
         """Gets examples from the specified page.
 
         Args:
@@ -96,24 +135,24 @@ class ReversoContextAPI(object):
         return requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
                              data=json.dumps(self.data)).json()["list"]
 
-    def get_results_pair_by_pair(self):
+    def get_examples_pair_by_pair(self):
         """A generator that gets words' pairs from server pair by pair.
 
         You should use this method if you need to get just some words, not all at once,
         but you want to get them immediately.
 
         Returns:
-            A generator, which yields a WordUsageExample namedtuples.
+            A generator, which yields WordUsageExample namedtuples.
         """
 
         for npage in range(1, self.page_count + 1):
-            for word in self.get_page(npage):
+            for word in self.get_examples_page_json(npage):
                 source = BeautifulSoup(word["s_text"], features=self.parser)
                 target = BeautifulSoup(word["t_text"], features=self.parser)
                 yield WordUsageExample(source.text, target.text,
                                        find_highlighted_idxs(source, "em"), find_highlighted_idxs(target, "em"))
 
-    def get_results(self):
+    def get_examples(self):
         """Gets all words' pairs from the server at once returning them as a list.
 
         Because pretty big amount of time is necessary to get every page from the server,
@@ -125,7 +164,7 @@ class ReversoContextAPI(object):
             A list of words examples. Every element is a WordUsageExample namedtuple.
         """
 
-        return [pair for pair in self.get_results_pair_by_pair()]
+        return [pair for pair in self.get_examples_pair_by_pair()]
 
 
 # A simple usage example
@@ -184,7 +223,7 @@ if __name__ == "__main__":
     )
 
     print()
-    results = api.get_results_pair_by_pair()
+    results = api.get_examples_pair_by_pair()
     for wue in results:
         source_text, target_text, source_highlighted, target_highlighted = wue
 

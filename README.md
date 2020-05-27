@@ -1,5 +1,5 @@
 # ReversoAPI
-This is an unofficial Reverso API. It is currently available only for Context.
+This is a Python wraparound for Reverso API. It is currently available only for Reverso Context.
 
 ## Context
 This part of API lets you easily get usage examples list for words from Reverso Context.

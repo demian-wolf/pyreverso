@@ -9,6 +9,9 @@ HEADERS = {
     "Content-Type": "application/json; charset=UTF-8"
 }
 
+LANG_NAMES = {"en": "english",
+              "ru": "russian", }  # TODO: write for all available languages
+
 
 def find_highlighted_idxs(soup, tag):
     """Finds indexes of the parts of the soup surrounded by a particular HTML tag
@@ -62,6 +65,17 @@ class ReversoContextAPI(object):
                     parser=self.parser,
                     **self.data)
 
+    def __repr__(self):
+        return "ReversoContextAPI({source_text!r}, {target_text!r}, {source_lang!r}, {target_lang!r}, {parser!r})" \
+            .format(parser=self.parser, **self.data)
+
+    def __eq__(self, other):
+        def remove_npage(d):
+            return {i: d[i] for i in d if i != "npage"}
+        if isinstance(other, ReversoContextAPI):
+            return remove_npage(self.data) == remove_npage(other.data) and self.parser == other.parser
+        return False
+
     def get_page(self, npage):
         """Gets examples from the specified page.
 
@@ -90,7 +104,7 @@ class ReversoContextAPI(object):
             start and end indexes of highlighted parts of the examples;
             first list is for the source text, while the second one is
             for the target text:
-            ((source text, target text), ([(start, end), ...], [(start, end), ...])
+            ((source text, target text), ([(start, end), ...], [(start, end), ...], ...)
         """
 
         for npage in range(1, self.page_count + 1):
@@ -115,7 +129,7 @@ class ReversoContextAPI(object):
             start and end indexes of highlighted parts of the examples;
             first list is for the source text, while the second one is
             for the target text:
-            ((source text, target text), ([(start, end), ...], [(start, end), ...])
+            ((source text, target text), ([(start, end), ...], [(start, end), ...], ...)
         """
 
         return [pair for pair in self.get_results_pair_by_pair()]

@@ -37,22 +37,24 @@ pip install reverso-api
 ```
 
 ###### Creating a simple ReversoContextAPI-based program:
+1. Import the Reverso-API module:
 ```python
-import reverso_api
+from reverso_api.context import ReversoContextAPI
 ```
 
 Now, let's get the translations of the word/phrase from English to Chinese and get first ten words' usage examples.
 
-1. Create an instance of ReversoContextAPI:
+2. Create an instance of ReversoContextAPI:
 ```python
-api = reverso_api.context.ReversoContextAPI(input("Enter the word/phrase to be translated... "),
-                                            input("Enter the word/phrase that must be in the translation examples"),
-                                            input("Enter the source language... "),
-                                            input("Enter the target language... ")
-                                            )
+api = ReversoContextAPI(
+                        input("Enter the word/phrase to be translated... "),
+                        input("Enter the word/phrase that must be in the translation examples"),
+                        input("Enter the source language... "),
+                        input("Enter the target language... ")
+                        )
 ```
 
-2. Let's get the translations:
+3. Let's get the translations:
 ```python
 for source_word, translation, frequency, part_of_speech, inflected_forms in api.get_translations():
     print(source_word, "==" translation)
@@ -63,7 +65,7 @@ for source_word, translation, frequency, part_of_speech, inflected_forms in api.
     print()
 ```
 
-3. And now let's get first ten translation examples:
+4. And now let's get first ten translation examples:
 ```python
 examples = api.get_translation_examples_pair_by_pair()
 for _ in range(10):
@@ -71,7 +73,24 @@ for _ in range(10):
     print(source.text, "==", target.text)
 ```
 
-4. Congratulations! You have created the first app that uses ReversoContextAPI.
+5. Congratulations! You have created your first app that uses ReversoContextAPI!
 
-###### Creating a simple ReversoVoice-based program:
-TODO
+###### Creating a simple ReversoVoiceAPI-based program:
+1. Import the Reverso-API module:
+```python
+from reverso_api.voice import ReversoVoiceAPI
+```
+
+2. Create an instance of ReversoVoiceAPI:
+```python
+api = ReversoVoiceAPI()
+```
+
+3. Let's find all the voices:
+```python
+voices = api.get_available_voices()
+for voice in voices["US English"]:
+    api.say("Hello, World!", voice, wait=True)
+```
+
+4. Congratulations! You have created your first app that uses ReversoVoiceAPI!

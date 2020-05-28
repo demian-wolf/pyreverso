@@ -1,25 +1,24 @@
 # Reverso-API
 
 ### What's this?
-<i>This is a wrapper around Reverso's ([reverso.net](https://reverso.net)) API for Python.</i>
+*This is a wrapper around Reverso's ([reverso.net](https://reverso.net)) API for Python.*
 
 There is a very good website -- [Reverso](https://reverso.net). It's a very powerful and useful tool for those
 people, who learn foreign languages. It consists of several sub-apps:
-<ul>
-<li><a href="https://context.reverso.net">Context</a> -- translation of words and most of complex phrases.
-with usage examples.</li>
-<li><a href="https://conjugator.reverso.net">Conjugator</a> -- a verb conjugator</li>
-<li><a href="https://dictionary.reverso.net">Dictionary</a> -- a dictionary (both definitions and translation to other languages)</li>
-<li><a href="https://reverso.net/spell-checker">Spell Checker</a> -- a spell checker.</li>
-<li>and others</li>
-</ul>
++ [Context](https://context.reverso.net) -- translation of words and most of complex phrases.
+with usage examples.
++ [Conjugator](https://conjugator.reverso.net) -- a verb conjugator.
++ [Dictionary](https://dictionary.reverso.net) -- a dictionary (both definitions and translation to other languages).
++ [Spell Checker](https://reverso.net/spell-checker) -- a spell checker.
++ and others
+
 
 It also has a pretty good "Speak" feature for different languages ([Reverso Voice](https://voice.reverso.net/RestPronunciation.svc/help);
-<a href="https://voice.reverso.net/RestPronunciation.svc/v1/output=json/GetVoiceStream/voiceName=Heather22k?inputText=VGhpcyBpcyBhbiBleGFtcGxlIG9mIGEgdGV4dCwgc3Bva2VuIGJ5IFJldmVyc28gVm9pY2U=">here</a> is an example of spoken text).
+[here](https://voice.reverso.net/RestPronunciation.svc/v1/output=json/GetVoiceStream/voiceName=Heather22k?inputText=VGhpcyBpcyBhbiBleGFtcGxlIG9mIGEgdGV4dCwgc3Bva2VuIGJ5IFJldmVyc28gVm9pY2U=) is an example of spoken text).
 
 Once upon a time I was writing a language-learning app, and wanted to include word translation with examples (as
-in Reverso Context). But, unfortunately, I could not find a ready wrapper around this web-site's API. So I decided to create it
-on my own.
+in Reverso Context). But, unfortunately, I could not find a ready wrapper around this web-site's API. So I decided to
+create it on my own.
 
 ### Features
 Currently the wrapper supports Reverso Context API and Reverso Voice API.
@@ -30,13 +29,13 @@ at them.
 
 ### Getting started
 
-##### Installation
+#### Installation
 First, install the package with pip. Just type in the terminal/command-line:
 ```
 pip install reverso-api
 ```
 
-##### Creating a simple ReversoContextAPI-based program (mini, command-line version of Reverso Context):
+#### Creating a simple ReversoContextAPI-based program (mini, command-line version of Reverso Context):
 1. Import the Reverso-API module:
 ```python
 from reverso_api.context import ReversoContextAPI
@@ -75,7 +74,7 @@ for _ in range(10):
 
 5. Congratulations! You have created your first app that uses ReversoContextAPI!
 
-##### Creating a simple ReversoVoiceAPI-based program ("Hello, World!" spoken by different people):
+#### Creating a simple ReversoVoiceAPI-based program ("Hello, World!" spoken by different people):
 1. Import the Reverso-API module:
 ```python
 from reverso_api.voice import ReversoVoiceAPI

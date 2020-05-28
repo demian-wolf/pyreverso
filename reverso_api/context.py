@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+"""Reverso Context (context.reverso.net) API for Python"""
+
 from collections import namedtuple
 import json
 
@@ -7,27 +9,14 @@ from bs4 import BeautifulSoup
 import requests
 
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0",
-    "Content-Type": "application/json; charset=UTF-8"
-}
+__all__ = ["ReversoContextAPI", "WordUsageExample", "Translation", "InflectedForm"]
 
-LANG_NAMES = {"ar": "arabic",
-              "de": "german",
-              "en": "english",
-              "es": "spanish",
-              "fr": "french",
-              }  # TODO: write for all available languages (if it would be necessary)
-
-PARTS_OF_SPEECH = {"adj.": "adjective",
-                   "adv.": "adverb",
-                   "n.": "noun",
-                   "v.": "verb",
-                   None: None
-                   }
+HEADERS = {"User-Agent": "Mozilla/5.0",
+           "Content-Type": "application/json; charset=UTF-8"
+           }
 
 WordUsageExample = namedtuple("WordUsageExample",
-                              ("source_text", "target_text", "source_highlighted", "target_highlighted"))
+                              ("text", "highlighted"))
 
 Translation = namedtuple("Translation",
                          ("source_word", "translation", "frequency", "part_of_speech", "inflected_forms"))
@@ -35,11 +24,6 @@ Translation = namedtuple("Translation",
 InflectedForm = namedtuple("InflectedForm",
                            ("translation", "frequency"))
 
-
-# TODO: improve explanation of the WordUsageExample in docstrings
-# TODO: add docstrings for undocumented functions
-# TODO: convert part of speech from short form to long (e.g. "v." -> "verb")
-# TODO: maybe make a special object which contains both translation example and highlighted indexes
 
 def find_highlighted_idxs(soup, tag):
     """Finds indexes of the parts of the soup surrounded by a particular HTML tag
@@ -57,6 +41,7 @@ def find_highlighted_idxs(soup, tag):
     Returns:
           A list of the tuples, which contain start and end indexes of the soup parts,
           surrounded by tags.
+
     """
 
     cur, idxs = 0, []
@@ -68,6 +53,15 @@ def find_highlighted_idxs(soup, tag):
 
 
 class ReversoContextAPI(object):
+    """Class for Reverso Context API (https://voice.reverso.net/)
+
+    Methods:
+        get_translations()
+        _get_examples_page_json(npage)
+        get_examples_pair_by_pair()
+        get_examples()
+
+    """
 
     def __init__(self, source_text="я люблю кошек", target_text="", source_lang="ru", target_lang="en", parser="lxml"):
         self.data = {
@@ -81,24 +75,21 @@ class ReversoContextAPI(object):
         self.page_count = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
                                         data=json.dumps(self.data)).json()["npages"]
 
-    def __str__(self):
-        return "A Reverso Context API instance\n" \
-               "Source Text: {source_text}\n" \
-               "Target Text: {target_text}\n" \
-               "Source Language: {source_lang}\n" \
-               "Target Language: {target_lang}\n" \
-               "Total Page Count: {page_count}\n" \
-               "HTML Parser: {parser}" \
-            .format(page_count=self.page_count,
-                    parser=self.parser,
-                    **self.data)
-
     def __repr__(self):
         return "ReversoContextAPI({source_text!r}, {target_text!r}, {source_lang!r}, {target_lang!r}, {parser!r})" \
             .format(parser=self.parser, **self.data)
 
     def __eq__(self, other):
         def remove_npage(d):
+            """Removes the "npage" key from the given dict.
+
+            Args:
+                d: given dict
+
+            Returns:
+                the given dict without the "npage" key
+
+            """
             return {i: d[i] for i in d if i != "npage"}
 
         if isinstance(other, ReversoContextAPI):
@@ -110,13 +101,8 @@ class ReversoContextAPI(object):
 
         Returns:
             A list of Translation namedtuples.
-        """
 
-        def fetch_inflected_forms(json):
-            inflected_forms = []
-            for form in json:
-                inflected_forms.append(InflectedForm(form["term"], form["alignFreq"]))
-            return inflected_forms
+        """
 
         translations_json = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
                                           data=json.dumps(self.data)).json()["dictionary_entry_list"]
@@ -125,11 +111,11 @@ class ReversoContextAPI(object):
             translations.append(
                 Translation(self.data["source_text"], translation["term"], translation["alignFreq"],
                             translation["pos"],
-                            fetch_inflected_forms(translation["inflectedForms"])))
+                            [InflectedForm(form["term"], form["alignFreq"]) for form in translation["inflectedForms"]]))
 
         return translations
 
-    def get_examples_page_json(self, npage):
+    def _get_examples_page_json(self, npage):
         """Gets examples from the specified page.
 
         Args:
@@ -138,6 +124,7 @@ class ReversoContextAPI(object):
         Returns:
             JSON-based Python list of dicts, where every dict contains information about a particular
             word usage example.
+
         """
 
         self.data["npage"] = npage
@@ -148,18 +135,19 @@ class ReversoContextAPI(object):
         """A generator that gets words' pairs from server pair by pair.
 
         You should use this method if you need to get just some words, not all at once,
-        but you want to get them immediately.
+        but you want to do that immediately.
 
-        Returns:
-            A generator, which yields WordUsageExample namedtuples.
+        Yields:
+            Tuples with two WordUsageExample namedtuples (for source and target text and highlighted indexes)
+
         """
 
         for npage in range(1, self.page_count + 1):
-            for word in self.get_examples_page_json(npage):
+            for word in self._get_examples_page_json(npage):
                 source = BeautifulSoup(word["s_text"], features=self.parser)
                 target = BeautifulSoup(word["t_text"], features=self.parser)
-                yield WordUsageExample(source.text, target.text,
-                                       find_highlighted_idxs(source, "em"), find_highlighted_idxs(target, "em"))
+                yield (WordUsageExample(source.text, find_highlighted_idxs(source, "em")),
+                       WordUsageExample(target.text, find_highlighted_idxs(target, "em")))
 
     def get_examples(self):
         """Gets all words' pairs from the server at once returning them as a list.
@@ -170,7 +158,9 @@ class ReversoContextAPI(object):
         with all them at once.
 
         Returns:
-            A list of words examples. Every element is a WordUsageExample namedtuple.
+            A list of words examples. Every element is a tuple with two WordUsageExample namedtuples
+            (for source and target text and highlighted indexes).
+
         """
 
         return [pair for pair in self.get_examples_pair_by_pair()]
@@ -178,49 +168,69 @@ class ReversoContextAPI(object):
 
 # A simple usage example
 if __name__ == "__main__":
-    def insert_char(string, index, char):
-        """Inserts character into a string.
 
-        Example:
-            string = "abc"
-            index = 1
-            char = "+"
-            Returns: "a+bc"
+    def highlight_example(text, highlighted):
+        """'Highlights' ALL the highlighted parts of the word usage example with * characters.
 
         Args:
-            string: Given string
-            index: Index where to insert
-            char: Which char to insert
-
-        Return:
-            String string with character char inserted at index index.
-        """
-
-        return string[:index] + char + string[index:]
-
-
-    def highlight_string(string, start, end, shift):
-        """'Highlights' the given string with * character.
-
-        Example:
-            string = "This is a sample string"
-            start = 0
-            end = 4
-            shift = 0
-            Returns: "*This* is a sample string"
-
-        Args:
-            string: The string to be highlighted
-            start: The start index of the highlighted part
-            end: The end index of the highlighted part
+            text: The text of the example
+            highlighted: Indexes of the highlighted parts' indexes
 
         Returns:
-            The highlighted string.
+            The highlighted word usage example
+
         """
 
-        s = insert_char(string, start + shift, "*")
-        s = insert_char(s, end + shift + 1, "*")
-        return s
+        def insert_char(string, index, char):
+            """Inserts the given character into a string.
+
+            Example:
+                string = "abc"
+                index = 1
+                char = "+"
+                Returns: "a+bc"
+
+            Args:
+                string: Given string
+                index: Index where to insert
+                char: Which char to insert
+
+            Return:
+                String string with character char inserted at index index.
+            """
+
+            return string[:index] + char + string[index:]
+
+        def highlight_string(string, start, end, shift):
+            """'Highlights' ONE highlighted part of the word usage example with two * characters.
+
+            Example:
+                string = "This is a sample string"
+                start = 0
+                end = 4
+                shift = 0
+                Returns: "*This* is a sample string"
+
+            Args:
+                string: The string to be highlighted
+                start: The start index of the highlighted part
+                end: The end index of the highlighted part
+                shift: How many highlighting chars were already inserted (to get right indexes)
+
+            Returns:
+                The highlighted string.
+
+            """
+
+            s = insert_char(string, start + shift, "*")
+            s = insert_char(s, end + shift + 1, "*")
+            return s
+
+        shift = 0
+        for start, end in highlighted:
+            text = highlight_string(text, start, end, shift)
+            shift += 2
+        return text
 
 
     print("Reverso.Context API usage example")
@@ -241,16 +251,5 @@ if __name__ == "__main__":
 
     print()
     print("Word Usage Examples:")
-    results = api.get_examples_pair_by_pair()
-    for source_text, target_text, source_highlighted, target_highlighted in results:
-        shift = 0
-        for start, end in source_highlighted:
-            source_text = highlight_string(source_text, start, end, shift)
-            shift += 2
-
-        shift = 0
-        for start, end in target_highlighted:
-            target_text = highlight_string(target_text, start, end, shift)
-            shift += 2
-
-        print(source_text, "==", target_text)
+    for source, target in api.get_examples_pair_by_pair():
+        print(highlight_example(*source), "==", highlight_example(*target))

@@ -43,7 +43,6 @@ pip install reverso-api
     ```python
     from reverso_api.context import ReversoContextAPI
     ```
-
 2. Create an instance of ReversoContextAPI:
     ```python
     api = ReversoContextAPI(
@@ -53,7 +52,6 @@ pip install reverso-api
                             input("Enter the target language... ")
                             )
     ```
-
 3. Let's get the translations:
     ```python
     for source_word, translation, frequency, part_of_speech, inflected_forms in api.get_translations():
@@ -64,7 +62,6 @@ pip install reverso-api
             print("Inflected forms:", ", ".join(map(lambda form: str(form.translation), inflected_forms)))
         print()
     ```
-
 4. And now let's get first ten translation examples:
     ```python
     examples = api.get_translation_examples_pair_by_pair()
@@ -72,7 +69,6 @@ pip install reverso-api
         source, target = next(examples)
         print(source.text, "==", target.text)
     ```
-
 5. Congratulations! You have created your first app that uses ReversoContextAPI!
 
 #### Creating a simple ReversoVoiceAPI-based program ("Hello, World!" spoken by different people):
@@ -80,17 +76,14 @@ pip install reverso-api
     ```python
     from reverso_api.voice import ReversoVoiceAPI
     ```
-
 2. Create an instance of ReversoVoiceAPI:
     ```python
     api = ReversoVoiceAPI()
     ```
-
 3. Let's find all the voices:
     ```python
     voices = api.get_available_voices()
     for voice in voices["US English"]:
         api.say("Hello, World!", voice, wait=True)
     ```
-
 4. Congratulations! You have created your first app that uses ReversoVoiceAPI!

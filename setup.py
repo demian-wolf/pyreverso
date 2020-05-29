@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Reverso_API",
-    version="0.0.1.alpha",
+    version="0.0.1.alpha.2",
     license="MIT",
     author="Demian Wolf",
     author_email="demianwolfssd@gmail.com",
@@ -14,7 +14,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/demian-wolf/ReversoAPI",
-    keywords=["REVERSO", "REVERSO-CONTEXT", "REVERSO CONTEXT" "CONTEXT", "REVERSO-VOICE", "REVERSO VOICE", "VOICE",
+    keywords=["REVERSO", "REVERSO-CONTEXT", "REVERSO CONTEXT", "CONTEXT", "REVERSO-VOICE", "REVERSO VOICE", "VOICE",
               "REVERSO-API", "API", "WRAPPER", "PYTHON"],
     packages=setuptools.find_packages(),
     install_requires=[

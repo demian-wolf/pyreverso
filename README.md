@@ -41,8 +41,6 @@ pip install reverso-api
     from reverso_api.context import ReversoContextAPI
     ```
 
-    Now, let's get the translations of the word/phrase from English to Chinese and get first ten words' usage examples.
-
 2. Create an instance of ReversoContextAPI:
     ```python
     api = ReversoContextAPI(

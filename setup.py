@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Reverso_API",
-    version="0.0.1.alpha.2",
+    version="0.0.1.alpha",
     license="MIT",
     author="Demian Wolf",
     author_email="demianwolfssd@gmail.com",

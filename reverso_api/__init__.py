@@ -3,11 +3,11 @@
 from . import context, voice
 
 
-__author__ = "Demian Volkov aka Demian Wolf"
+__author__ = "Demian Wolf"
 __copyright__ = "Copyright 2020, Demian Wolf"
 __credits__ = ["Demian Wolf"]
 __license__ = "MIT"
-__version__ = "0.0.1"
+__version__ = "0.0.1.alpha"
 __maintainer__ = "Demian Wolf"
 __email__ = "demianwolfssd@gmail.com"
 __status__ = "Development"

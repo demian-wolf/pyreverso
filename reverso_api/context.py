@@ -25,7 +25,7 @@ InflectedForm = namedtuple("InflectedForm",
                            ("translation", "frequency"))
 
 
-def find_highlighted_idxs(soup, tag):
+def find_highlighted_idxs(soup, tag="em"):
     """Finds indexes of the parts of the soup surrounded by a particular HTML tag
     relatively to the soup without the tag.
 
@@ -109,8 +109,7 @@ class ReversoContextAPI(object):
         translations = []
         for translation in translations_json:
             translations.append(
-                Translation(self.data["source_text"], translation["term"], translation["alignFreq"],
-                            translation["pos"],
+                Translation(self.data["source_text"], translation["term"], translation["alignFreq"], translation["pos"],
                             [InflectedForm(form["term"], form["alignFreq"]) for form in translation["inflectedForms"]]))
 
         return translations
@@ -132,7 +131,7 @@ class ReversoContextAPI(object):
                              data=json.dumps(self.data)).json()["list"]
 
     def get_examples_pair_by_pair(self):
-        """A generator that gets words' pairs from server pair by pair.
+        """A generator that gets words' usage examples pairs from server pair by pair.
 
         You should use this method if you need to get just some words, not all at once,
         but you want to do that immediately.
@@ -146,15 +145,15 @@ class ReversoContextAPI(object):
             for word in self._get_examples_page_json(npage):
                 source = BeautifulSoup(word["s_text"], features=self.parser)
                 target = BeautifulSoup(word["t_text"], features=self.parser)
-                yield (WordUsageExample(source.text, find_highlighted_idxs(source, "em")),
-                       WordUsageExample(target.text, find_highlighted_idxs(target, "em")))
+                yield (WordUsageExample(source.text, find_highlighted_idxs(source)),
+                       WordUsageExample(target.text, find_highlighted_idxs(target)))
 
     def get_examples(self):
-        """Gets all words' pairs from the server at once returning them as a list.
+        """Gets all words' usage examples pairs from the server at once returning them as a list.
 
         Because pretty big amount of time is necessary to get every page from the server,
         this method may take long time to finish, so use it only either if there are not
-        so much usage examples for the particular word (<10 pages) or if you need to deal
+        so much usage examples for the particular word (<5 pages) or if you need to deal
         with all them at once.
 
         Returns:
@@ -201,7 +200,7 @@ if __name__ == "__main__":
 
             return string[:index] + char + string[index:]
 
-        def highlight_string(string, start, end, shift):
+        def _highlight_once(string, start, end, shift):
             """'Highlights' ONE highlighted part of the word usage example with two * characters.
 
             Example:
@@ -228,7 +227,7 @@ if __name__ == "__main__":
 
         shift = 0
         for start, end in highlighted:
-            text = highlight_string(text, start, end, shift)
+            text = _highlight_once(text, start, end, shift)
             shift += 2
         return text
 

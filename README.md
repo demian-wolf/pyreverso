@@ -24,8 +24,11 @@ create it on my own.
 Currently the wrapper supports Reverso Context API and Reverso Voice API.
 
 ### Docs
-Docs are not ready yet; they'll be published soon. Every method of the code has docstrings, you can take a look
-at them.
+Docs are not ready yet; they will be published soon. Every method of the code has docstrings,
+currently you can take a look at them. Also both reverso_api.context and reverso_api.voice
+contain a sample usage example (after `if __name__ == "__main__"`); they are different from examples
+below ("Getting started" section), and show more advanced features (such as surrounding highlighted
+parts of words' usage examples in Context by *).
 
 ### Getting started
 

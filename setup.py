@@ -14,7 +14,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/demian-wolf/ReversoAPI",
-    keywords=["REVERSO", "REVERSO-CONTEXT", "CONTEXT", "REVERSO-VOICE", "VOICE",
+    keywords=["REVERSO", "REVERSO-CONTEXT", "REVERSO CONTEXT" "CONTEXT", "REVERSO-VOICE", "REVERSO VOICE", "VOICE",
               "REVERSO-API", "API", "WRAPPER", "PYTHON"],
     packages=setuptools.find_packages(),
     install_requires=[

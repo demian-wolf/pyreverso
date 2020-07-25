@@ -3,87 +3,37 @@
 ### What's this?
 *This is a wrapper around Reverso's ([reverso.net](https://reverso.net)) API for Python.*
 
-There is a very good website -- [Reverso](https://reverso.net). It's a very powerful and useful tool for those
-people, who learn foreign languages. It consists of several sub-apps:
-+ [Context](https://context.reverso.net) -- translation of words and most of complex phrases.
-with usage examples.
+## What is Reverso?
+[Reverso](https://reverso.net) is a pretty powerful and useful tool for those who learn foreign languages.
+It consists of such sub-apps:
++ [Context](https://context.reverso.net) -- translation of words and complex phrases with usage examples provided.
 + [Conjugator](https://conjugator.reverso.net) -- a verb conjugator.
-+ [Dictionary](https://dictionary.reverso.net) -- a dictionary (both definitions and translation to other languages).
++ [Dictionary](https://dictionary.reverso.net) -- a dictionary (both definitions and translations to other languages).
 + [Spell Checker](https://reverso.net/spell-checker) -- a spell checker.
++ [Translation](https://www.reverso.net/text_translation.aspx) -- a translator which supports sentences, apart from words and phrases.
 + and others
 
-
-It also has a pretty good "Speak" feature for different languages ([Reverso Voice](https://voice.reverso.net/RestPronunciation.svc/help);
-[here](https://voice.reverso.net/RestPronunciation.svc/v1/output=json/GetVoiceStream/voiceName=Heather22k?inputText=VGhpcyBpcyBhbiBleGFtcGxlIG9mIGEgdGV4dCwgc3Bva2VuIGJ5IFJldmVyc28gVm9pY2U=) is an example of spoken text).
-
-Once upon a time I was writing a language-learning app, and wanted to include word translation with examples (as
-in Reverso Context). But, unfortunately, I could not find a ready wrapper around this web-site's API. So I decided to
-create it on my own.
+It also has a pretty good "Say" feature for various languages ([Reverso Voice](https://voice.reverso.net/RestPronunciation.svc/help);
+[here](https://voice.reverso.net/RestPronunciation.svc/v1/output=json/GetVoiceStream/voiceName=Heather22k?inputText=VGhpcyBpcyBhbiBleGFtcGxlIG9mIGEgdGV4dCwgc3Bva2VuIGJ5IFJldmVyc28gVm9pY2U=) is an example of text, spoken by it).
 
 ### Features
-Currently the wrapper supports Reverso Context API and Reverso Voice API.
-
-### Docs
-Docs are not ready yet; they will be published soon. Every method of the code has docstrings,
-currently you can take a look at them. Also both reverso_api.context and reverso_api.voice
-contain a sample usage example (after `if __name__ == "__main__"`); they are different from examples
-below ("Getting started" section), and show more advanced features (such as surrounding highlighted
-parts of words' usage examples in Context by *).
+Currently, the wrapper provides Reverso Context API and Reverso Voice API.
 
 ### Getting started
 
 #### Installation
-First, install the package with pip. Just type in the terminal/command-line:
+First, install the package with pip. Just type this in the terminal/command-line:
 ```
 pip install reverso-api
 ```
 
-#### Creating a simple ReversoContextAPI-based program (mini, command-line version of Reverso Context):
-Import the Reverso-API module:
-```python
-from reverso_api.context import ReversoContextAPI
-```
-Create an instance of ReversoContextAPI:
-```python
-api = ReversoContextAPI(
-                        input("Enter the word/phrase to be translated... "),
-                        input("Enter the word/phrase that must be in (target) word usage examples... "),
-                        input("Enter the source language... "),
-                        input("Enter the target language... ")
-                        )
-```
-Let's get the translations:
-```python
-for source_word, translation, frequency, part_of_speech, inflected_forms in api.get_translations():
-    print(source_word, "==", translation)
-    print("Frequency (how many word usage examples contain this word):", frequency)
-    print("Part of speech:", part_of_speech if part_of_speech else "unknown")
-    if inflected_forms:
-        print("Inflected forms:", ", ".join(map(lambda form: str(form.translation), inflected_forms)))
-    print()
-```
-And now let's get first ten translation examples:
-```python
-examples = api.get_translation_examples_pair_by_pair()
-for _ in range(10):
-    source, target = next(examples)
-    print(source.text, "==", target.text)
-```
-Congratulations! You have created your first app that uses ReversoContextAPI!
+#### Docs
+Docs are not ready yet. Every method of the code already has docstrings though, so
+you can take a look at them in the meantime.
 
-#### Creating a simple ReversoVoiceAPI-based program ("Hello, World!" spoken by different people):
-Import the Reverso-API module:
-```python
-from reverso_api.voice import ReversoVoiceAPI
-```
-Create an instance of ReversoVoiceAPI:
-```python
-api = ReversoVoiceAPI()
-```
-Let's find all the voices:
-```python
-voices = api.get_available_voices()
-for voice in voices["US English"]:
-    api.say("Hello, World!", voice, wait=True)
-```
-Congratulations! You have created your first app that uses ReversoVoiceAPI!
+#### Examples
+In addition there are several examples that can help you to figure out how to use this library.
+You can find them in the [examples](https://github.com/demian-wolf/ReversoAPI/tree/master/examples)
+project directory.
+
+Note that examples that have speaking feature require pygame to work.

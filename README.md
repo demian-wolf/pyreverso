@@ -28,8 +28,7 @@ pip install reverso-api
 ```
 
 #### Docs
-Docs are not ready yet. Every method of the code already has docstrings though, so
-you can take a look at them in the meantime.
+Docs are not ready yet. However, there is a draft in the [docs](https://github.com/demian-wolf/Reverso-API/tree/master/docs) project directory.
 
 #### Examples
 In addition there are several examples that can help you to figure out how to use this library.

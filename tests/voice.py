@@ -1,7 +1,7 @@
 import unittest
 import contextlib
 
-from reverso_api.voice import ReversoVoiceAPI, Voice
+from reverso_api.voice import ReversoVoiceAPI, Voice, get_voices
 
 
 def ask(what):
@@ -13,10 +13,10 @@ def ask(what):
             return False
 
 class TestReversoVoiceAPI(unittest.TestCase):
-    api = ReversoVoiceAPI()
+    api = ReversoVoiceAPI("Hello, World!", "Heather22k")
 
-    def test__voices(self):
-        voices = self.api.voices
+    def test__get_voices(self):
+        voices = get_voices()
         self.assertTrue(isinstance(voices, dict))
         for k, v in voices.items():
             self.assertTrue(isinstance(k, str))
@@ -24,10 +24,11 @@ class TestReversoVoiceAPI(unittest.TestCase):
             for voice in v:
                 self.assertTrue(isinstance(voice, Voice))              
 
-    def test__get_mp3_data(self):
-        self.assertRaises(ValueError, self.api.get_mp3_data, "Hello, World!", "a definitely invalid voice", 100)
-        for voice in [self.api.voices["US English"][0], "Heather22k"]:
-            mp3_data = self.api.get_mp3_data("Hello, World!", voice, 100)
+    def test__mp3_data(self):
+        voices = get_voices()
+        for voice in (voices["US English"][0], "Heather22k"):
+            self.api.voice = voice
+            mp3_data = self.api.mp3_data
             self.assertTrue(isinstance(mp3_data, bytes))
             with open("data/voice/hello_world_us.mp3", "rb") as fp:
                 self.assertEqual(fp.read(), mp3_data)
@@ -36,12 +37,13 @@ class TestReversoVoiceAPI(unittest.TestCase):
         pass
 
     def test__say(self):
+        voices = get_voices()
         try:
             with contextlib.redirect_stdout(None):
                 import pygame
         except ImportError:
             print("\n.say(...) method cannot be checked without pygame. Install it first.")
             return
-        for voice in [self.api.voices["US English"][0], "Heather22k"]:
-            self.api.say("Hello, World!", voice, 100, True)
+        for voice in [voices["US English"][0], "Heather22k"]:
+            self.api.say(wait=True)
         self.assertTrue(ask("Have you heard the voice, played 2 times?"))

@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="Reverso_API",
-    version="0.0.1.beta.1",
+    version="0.0.1.beta.2",
     license="MIT",
     author="Demian Wolf",
     author_email="demianwolfssd@gmail.com",
@@ -14,13 +14,14 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/demian-wolf/ReversoAPI",
-    download_url="https://github.com/demian-wolf/ReversoAPI/archive/v0.0.1.beta.1.tar.gz",
+    download_url="https://github.com/demian-wolf/ReversoAPI/archive/v.0.0.1.beta.2.tar.gz",
     keywords=["REVERSO", "REVERSO-CONTEXT", "REVERSO CONTEXT", "CONTEXT", "REVERSO-VOICE", "REVERSO VOICE", "VOICE",
               "REVERSO-API", "API", "WRAPPER", "PYTHON"],
     packages=setuptools.find_packages(),
     install_requires=[
         "requests",
         "beautifulsoup4",
+        "lxml",
     ],
     extras_require={
         "playing spoken text instead of just getting its MP3 data and/or saving it to file-like objects": ["pygame"],

@@ -6,7 +6,6 @@ import json
 from bs4 import BeautifulSoup
 import requests
 
-
 __all__ = ["ReversoContextAPI", "WordUsageExample", "Translation", "InflectedForm"]
 
 HEADERS = {"User-Agent": "Mozilla/5.0",
@@ -26,71 +25,92 @@ InflectedForm = namedtuple("InflectedForm",
 class ReversoContextAPI(object):
     """Class for Reverso Context API (https://voice.reverso.net/)
 
+    Attributes:
+        source_text
+        target_text
+        source_lang
+        target_lang
+        page_count
+    
     Methods:
         get_translations()
         get_examples()
 
     """
 
-    def __init__(self, source_text="я люблю кошек", target_text="", source_lang="ru", target_lang="en", parser="lxml"):
-        self.data = {
-            "source_text": source_text,
-            "target_text": target_text,
-            "source_lang": source_lang,
-            "target_lang": target_lang,
-            "npage": 1,
+    def __init__(self, source_text="пример", target_text="", source_lang="ru", target_lang="en"):
+        self.__source_text, self.__target_text, self.__source_lang, self.__target_lang = None, None, None, None
+        self.source_text, self.target_text, self.source_lang, self.target_lang = source_text, target_text, source_lang, target_lang
+        self.__update_data()
+        
+    def __update_data(self):
+        self.__data = {
+            "source_text": self.source_text,
+            "target_text": self.target_text,
+            "source_lang": self.source_lang,
+            "target_lang": self.target_lang,
         }
-        self.parser = parser
-        self.page_count = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
-                                        data=json.dumps(self.data)).json()["npages"]
+
+        self.__page_count = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
+                                          data=json.dumps(self.__data)).json()["npages"]
+        
+    @property
+    def page_count(self):
+        return self.__page_count
+
+    @property
+    def source_text(self):
+        return self.__source_text
+
+    @property
+    def target_text(self):
+        return self.__target_text
+
+    @property
+    def source_lang(self):
+        return self.__source_lang
+
+    @property
+    def target_lang(self):
+        return self.__target_lang
+    
+    @source_text.setter
+    def source_text(self, value):
+        assert isinstance(value, str), "source text must be a string"
+        self.__source_text = value
+        self.__update_data()
+
+    @target_text.setter
+    def target_text(self, value):
+        assert isinstance(value, str), "target text must be a string"
+        self.__target_text = value
+        self.__update_data()
+
+    # TODO: add deeper check (is specified language really available) instead of just checking is a string given.
+
+    @source_lang.setter
+    def source_lang(self, value):
+        assert isinstance(value, str), "language code must be a string"
+        self.__source_lang = value
+        self.__update_data()
+
+    @target_lang.setter
+    def target_lang(self, value):
+        assert isinstance(value, str), "language code must be a string"
+        self.__target_lang = value
+        self.__update_data()
 
     def __repr__(self):
-        return "ReversoContextAPI({source_text!r}, {target_text!r}, {source_lang!r}, {target_lang!r}, {parser!r})" \
-            .format(parser=self.parser, **self.data)
+        return "ReversoContextAPI({source_text!r}, {target_text!r}, {source_lang!r}, {target_lang!r})" \
+            .format(**self.__data)
 
     def __eq__(self, other):
-        def remove_npage(d):
-            """Removes the "npage" key from the given dict.
-
-            Args:
-                d: given dict
-
-            Returns:
-                the given dict without the "npage" key
-
-            """
-            return {i: d[i] for i in d if i != "npage"}
-
         if isinstance(other, ReversoContextAPI):
-            return remove_npage(self.data) == remove_npage(other.data) and self.parser == other.parser
+            return self.source_text == other.source_text \
+                   and self.target_text == other.target_text \
+                   and self.source_lang == other.source_lang \
+                   and self.target_lang == other.target_lang
         return False
-
-    @staticmethod
-    def _find_highlighted_idxs(soup, tag="em"):
-        """Finds indexes of the parts of the soup surrounded by a particular HTML tag
-        relatively to the soup without the tag.
-
-        Example:
-            soup = BeautifulSoup("<em>This</em> is <em>a sample</em> string")
-            tag = "em"
-            Returns: [(0, 4), (8, 16)]
-
-        Args:
-            soup: The BeautifulSoup's soup.
-            tag: The HTML tag, which surrounds the parts of the soup.
-
-        Returns:
-              A list of the tuples, which contain start and end indexes of the soup parts,
-              surrounded by tags.
-
-        """
-
-        cur, idxs = 0, []
-        for t in soup.find_all(text=True):
-            if t.parent.name == tag:
-                idxs.append((cur, cur + len(t)))
-            cur += len(t)
-        return idxs
 
     def get_translations(self):
         """Yields all available translations for the word (on the website you can find it just before the examples).
@@ -101,9 +121,9 @@ class ReversoContextAPI(object):
         """
 
         translations_json = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
-                                          data=json.dumps(self.data)).json()["dictionary_entry_list"]
+                                          data=json.dumps(self.__data)).json()["dictionary_entry_list"]
         for translation in translations_json:
-            yield Translation(self.data["source_text"], translation["term"], translation["alignFreq"],
+            yield Translation(self.__data["source_text"], translation["term"], translation["alignFreq"],
                               translation["pos"],
                               [InflectedForm(form["term"], form["alignFreq"]) for form in
                                translation["inflectedForms"]])
@@ -111,20 +131,51 @@ class ReversoContextAPI(object):
     def get_examples(self):
         """A generator that gets words' usage examples pairs from server pair by pair.
 
-        You should use this method if you need to get just some words, not all at once,
-        but you want to do that immediately.
+        Note:
+            Don't try to get all usage examples at one time if there are more than 5 pages (see the page_count attribute). It
+            may take a long time to complete because it will be necessary to connect to the server as many times as there are pages exist.
+            Just get the usage examples one by one as they are being fetched.
 
         Yields:
             Tuples with two WordUsageExample namedtuples (for source and target text and highlighted indexes)
 
         """
 
-        for npage in range(1, self.page_count + 1):
-            self.data["npage"] = npage
+        def find_highlighted_idxs(soup, tag="em"):
+            """Finds indexes of the parts of the soup surrounded by a particular HTML tag
+            relatively to the soup without the tag.
+
+            Example:
+                soup = BeautifulSoup("<em>This</em> is <em>a sample</em> string")
+                tag = "em"
+                Returns: [(0, 4), (8, 16)]
+
+            Args:
+                soup: The BeautifulSoup's soup.
+                tag: The HTML tag, which surrounds the parts of the soup.
+
+            Returns:
+                  A list of the tuples, which contain start and end indexes of the soup parts,
+                  surrounded by tags.
+
+            """
+
+            cur, idxs = 0, []
+            for t in soup.find_all(text=True):
+                if t.parent.name == tag:
+                    idxs.append((cur, cur + len(t)))
+                cur += len(t)
+            return idxs
+
+        for npage in range(1, self.__page_count + 1):
+            self.__data["npage"] = npage
             examples_json = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
-                                          data=json.dumps(self.data)).json()["list"]
+                                          data=json.dumps(self.__data)).json()["list"]
             for word in examples_json:
-                source = BeautifulSoup(word["s_text"], features=self.parser)
-                target = BeautifulSoup(word["t_text"], features=self.parser)
-                yield (WordUsageExample(source.text, self._find_highlighted_idxs(source)),
-                       WordUsageExample(target.text, self._find_highlighted_idxs(target)))
+                source = BeautifulSoup(word["s_text"], features="lxml")
+                target = BeautifulSoup(word["t_text"], features="lxml")
+                yield (WordUsageExample(source.text, find_highlighted_idxs(source)),
+                       WordUsageExample(target.text, find_highlighted_idxs(target)))
+
+
+x = ReversoContextAPI()

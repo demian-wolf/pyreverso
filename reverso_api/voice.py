@@ -9,67 +9,89 @@ import io
 import requests
 
 
-__all__ = ["ReversoVoiceAPI", "Voice"]
+__all__ = ["ReversoVoiceAPI", "Voice", "get_voices"]
 
 BASE_URL = "https://voice.reverso.net/RestPronunciation.svc/v1/output=json/"
 
 Voice = namedtuple("Voice", ("name", "language", "gender"))
 
+def get_voices():
+    _voices = defaultdict(list)
+    for voice in json.loads(requests.get(BASE_URL + "GetAvailableVoices").content)["Voices"]:
+        language_name = voice["Language"]
+        _voices[language_name].append(
+            Voice(voice["Name"], (int(voice["LangCode"]), language_name), voice["Gender"]))
+    return dict(_voices)
 
 class ReversoVoiceAPI:
     """Class for Reverso Voice API (https://voice.reverso.net/)
 
     Attributes:
-        voices
+        text
+        voice
+        speed
+        mp3_data
 
     Methods:
-        get_mp3_data(text, voice, speed=100)
-        write_to_file(file, text, voice, speed=100)
-        say(text, voice, speed=100, wait=False)
+        write_to_file(file)
+        say(wait=False)
 
     """
 
-    def __init__(self):
-        _voices = defaultdict(list)
-        self._voice_names = []
-        for voice in json.loads(requests.get(BASE_URL + "GetAvailableVoices").content)["Voices"]:
-            language_name = voice["Language"]
-            _voices[language_name].append(
-                Voice(voice["Name"], (int(voice["LangCode"]), language_name), voice["Gender"]))
-            self._voice_names.append(voice["Name"])
-        self.voices = dict(_voices)
+    def __init__(self, text, voice, speed=100):
+        self.__voice_names = [voice.name
+                               for _, voices_list in get_voices().items()
+                               for voice in voices_list]
+        self.__text, self.__voice, self.__speed = None, None, None
+        self.text, self.voice, self.speed = text, voice, speed
+    
+    @property
+    def text(self):
+        return self.__text
 
-    def get_mp3_data(self, text, voice, speed=100):
-        """Gets the spoken phrase as an MP3-data.
+    @property
+    def voice(self):
+        return self.__voice
 
-        Args:
-             text: The text to be spoken
-             voice: The voice which will speak the text (can be either str or a Voice namedtuple)
-             speed: The speed of the voice
+    @property
+    def speed(self):
+        return self.__speed
 
-        Returns:
-            A bytes-like object which contains the spoken phrase as an MP3-data.
+    @property
+    def mp3_data(self):
+        if self.__info_modified:
+            self.__mp3_data = requests.get(BASE_URL + "GetVoiceStream/voiceName={}?voiceSpeed={}&inputText={}".format(self.voice, self.speed, base64.b64encode(self.text.encode()).decode())).content
+            self.__info_modified = False
+        return self.__mp3_data
+    
+    @text.setter
+    def text(self, value):
+        assert isinstance(value, str), "text must be a string"
+        self.__text = value
+        self.__info_modified = True
 
-        """
+    @voice.setter
+    def voice(self, value):
+        if isinstance(value, Voice):
+            value = value.name
+        assert value in self.__voice_names, "invalid voice"
+        self.__voice = value
+        self.__info_modified = True
 
-        if isinstance(voice, Voice):
-            voice = voice.name
+    @speed.setter
+    def speed(self, value):
+        assert isinstance(value, int), "speed must be an integer"
+        assert 30 <= value <= 300, "speed must be 30 <= speed <= 300"
+        self.__speed = value
+        self.__info_modified = True
+        
 
-        if voice not in self._voice_names:
-            raise ValueError("the given voice is invalid")
-
-        return requests.get(BASE_URL + "GetVoiceStream/voiceName={}?voiceSpeed={}&inputText={}".format(
-            voice, speed, base64.b64encode(text.encode()).decode())).content
-
-    def write_to_file(self, file, text, voice, speed=100):
+    def write_to_file(self, file):
         """Writes the spoken phrase to an MP3 file. You can specify either a filename-string or a file-like object.
         If you are trying to pass another object as a file argument, TypeError is raised.
 
         Args:
             file: The output file (both strings with filenames and file-like objects are supported)
-            text: The text to be spoken
-            voice: The voice which will speak the text
-            speed: The speed of the voice
 
         Returns:
             none
@@ -81,14 +103,14 @@ class ReversoVoiceAPI:
 
         if isinstance(file, str):
             with open(file, "wb") as fp:
-                fp.write(self.get_mp3_data(text, voice, speed))
+                fp.write(self.mp3_data)
             return
         if hasattr(file, "write"):
-            file.write(self.get_mp3_data(text, voice, speed))
+            file.write(self.mp3_data)
             return
         raise TypeError("string or file-like object is required instead of {}".format(type(file)))
 
-    def say(self, text, voice, speed=100, wait=False):
+    def say(self, wait=False):
         """Reads the given text aloud. The difference from other methods is that this one PLAYS
         the sound (you can hear it if sound is enabled in your OS and pygame is installed).
 
@@ -97,9 +119,6 @@ class ReversoVoiceAPI:
             method, otherwise ImportError will be raised.
 
         Args:
-            text: The text to be spoken
-            voice: The voice which will speak the text
-            speed: The speed of the voice
             wait: Tells whether it's necessary to wait until the text is fully spoken
 
         Returns:
@@ -118,7 +137,7 @@ class ReversoVoiceAPI:
 
         pygame.mixer.init()
         with io.BytesIO() as fp:
-            fp.write(self.get_mp3_data(text, voice, speed))
+            self.write_to_file(fp)
             fp.seek(0)
             pygame.mixer.music.load(fp)
             pygame.mixer.music.play()

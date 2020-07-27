@@ -39,7 +39,7 @@ class ReversoContextAPI(object):
     """
 
     def __init__(self, source_text="пример", target_text="", source_lang="ru", target_lang="en"):
-        self.__source_text, self.__target_text, self.__source_lang, self.__target_lang = None, None, None, None
+        self.__source_text, self.__target_text, self.__source_lang, self.__target_lang, self.__page_count = None, None, None, None, None
         self.source_text, self.target_text, self.source_lang, self.target_lang = source_text, target_text, source_lang, target_lang
         self.__update_data()
         
@@ -50,12 +50,14 @@ class ReversoContextAPI(object):
             "source_lang": self.source_lang,
             "target_lang": self.target_lang,
         }
+        self.__info_modified = True
 
-        self.__page_count = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
-                                          data=json.dumps(self.__data)).json()["npages"]
-        
     @property
     def page_count(self):
+        if self.__info_modified:
+            self.__page_count = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
+                                          data=json.dumps(self.__data)).json()["npages"]
+            self.__info_modified = False
         return self.__page_count
 
     @property
@@ -167,7 +169,7 @@ class ReversoContextAPI(object):
                 cur += len(t)
             return idxs
 
-        for npage in range(1, self.__page_count + 1):
+        for npage in range(1, self.page_count + 1):
             self.__data["npage"] = npage
             examples_json = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
                                           data=json.dumps(self.__data)).json()["list"]
@@ -176,6 +178,3 @@ class ReversoContextAPI(object):
                 target = BeautifulSoup(word["t_text"], features="lxml")
                 yield (WordUsageExample(source.text, find_highlighted_idxs(source)),
                        WordUsageExample(target.text, find_highlighted_idxs(target)))
-
-
-x = ReversoContextAPI()

@@ -1,18 +1,20 @@
 """Reverso Context (context.reverso.net) API for Python"""
 
 from collections import namedtuple
+from typing import Generator
 import json
 
 from bs4 import BeautifulSoup
 import requests
 
-__all__ = ["ReversoContextAPI", "WordUsageExample", "Translation", "InflectedForm"]
+
+__all__ = ["ReversoContextAPI", "WordUsageContext", "Translation", "InflectedForm"]
 
 HEADERS = {"User-Agent": "Mozilla/5.0",
            "Content-Type": "application/json; charset=UTF-8"
            }
 
-WordUsageExample = namedtuple("WordUsageExample",
+WordUsageContext = namedtuple("WordUsageContext",
                               ("text", "highlighted"))
 
 Translation = namedtuple("Translation",
@@ -26,87 +28,149 @@ class ReversoContextAPI(object):
     """Class for Reverso Context API (https://voice.reverso.net/)
 
     Attributes:
+        supported_langs
         source_text
         target_text
         source_lang
         target_lang
-        page_count
+        total_pages
     
     Methods:
         get_translations()
         get_examples()
+        swap_langs()
 
     """
 
-    def __init__(self, source_text="пример", target_text="", source_lang="ru", target_lang="en"):
-        self.__source_text, self.__target_text, self.__source_lang, self.__target_lang, self.__page_count = None, None, None, None, None
-        self.source_text, self.target_text, self.source_lang, self.target_lang = source_text, target_text, source_lang, target_lang
-        self.__update_data()
+    def __init__(self,
+                 source_text="пример",
+                 target_text="",
+                 source_lang="ru",
+                 target_lang="en"):
         
-    def __update_data(self):
+        self.__source_text, self.__target_text = None, None
+        self.__source_lang, self.__target_lang = None, None
+        self.__total_pages = None
+
+        # FIXME: make self.supported_langs read-only
+        self.supported_langs = self.__fetch_supported_langs()
+
+        self.source_text, self.target_text = source_text, target_text
+        self.source_lang, self.target_lang = source_lang, target_lang
+
+        self.__update_data()
+
+    def __fetch_supported_langs(self) -> dict:
+        supported_langs = {}
+
+        response = requests.get("https://context.reverso.net/translation/",
+                                headers=HEADERS)
+
+        soup = BeautifulSoup(response.content, features="lxml")
+
+        src_selector = soup.find("div", id="src-selector")
+        trg_selector = soup.find("div", id="trg-selector")
+
+        for selector, attribute in ((src_selector, "source_lang"),
+                                   (trg_selector, "target_lang")):
+            dd_spans = selector.find(class_="drop-down").find_all("span")
+            langs = [span.get("data-value") for span in dd_spans]
+            langs = [lang for lang in langs
+                          if isinstance(lang, str) and len(lang) == 2]
+
+            supported_langs[attribute] = tuple(langs)
+
+        return supported_langs
+
+    def __update_data(self) -> None:
         self.__data = {
             "source_text": self.source_text,
             "target_text": self.target_text,
             "source_lang": self.source_lang,
             "target_lang": self.target_lang,
         }
-        self.__info_modified = True
+        self.__attrs_modified = True
 
     @property
-    def page_count(self):
-        if self.__info_modified:
-            self.__page_count = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
-                                          data=json.dumps(self.__data)).json()["npages"]
-            self.__info_modified = False
-        return self.__page_count
+    def total_pages(self) -> int:
+        if self.__attrs_modified:
+            response = requests.post("https://context.reverso.net/bst-query-service",
+                                    headers=HEADERS,
+                                    data=json.dumps(self.__data))
+
+            total_pages = response.json()["npages"]
+
+            if not isinstance(total_pages, int):
+                try:
+                    total_pages = int(total_pages)
+                except ValueError:
+                    raise ValueError('"npages" in the response cannot be interpreted as an integer')
+                if total_pages < 0:
+                    raise ValueError('"npages" in the response is a negative number')
+
+            self.__total_pages = total_pages
+            self.__attrs_modified = False
+
+        return self.__total_pages
 
     @property
-    def source_text(self):
+    def source_text(self) -> str:
         return self.__source_text
 
     @property
-    def target_text(self):
+    def target_text(self) -> str:
         return self.__target_text
 
     @property
-    def source_lang(self):
+    def source_lang(self) -> str:
         return self.__source_lang
 
     @property
-    def target_lang(self):
+    def target_lang(self) -> str:
         return self.__target_lang
     
     @source_text.setter
-    def source_text(self, value):
-        assert isinstance(value, str), "source text must be a string"
-        self.__source_text = value
+    def source_text(self, value) -> None:
+        self.__source_text = str(value)
         self.__update_data()
 
     @target_text.setter
-    def target_text(self, value):
-        assert isinstance(value, str), "target text must be a string"
-        self.__target_text = value
+    def target_text(self, value) -> None:
+        self.__target_text = str(value)
         self.__update_data()
 
-    # TODO: add deeper check (is specified language really available) instead of just checking is a string given.
-
     @source_lang.setter
-    def source_lang(self, value):
-        assert isinstance(value, str), "language code must be a string"
+    def source_lang(self, value) -> None:
+        value = str(value)
+
+        if value not in self.supported_langs["source_lang"]:
+            raise ValueError(f'"{value}" source language is not supported')
+
+        if value == self.source_lang:
+            raise ValueError(f"source language cannot be equal to the target language")
+        
         self.__source_lang = value
         self.__update_data()
 
     @target_lang.setter
-    def target_lang(self, value):
-        assert isinstance(value, str), "language code must be a string"
+    def target_lang(self, value) -> None:
+        value = str(value)
+
+        if value not in self.supported_langs["target_lang"]:
+            raise ValueError(f'"{value}" target language is not supported')
+
+        if value == self.source_lang:
+            raise ValueError(f"target language cannot be equal to the source language")
+
         self.__target_lang = value
         self.__update_data()
 
-    def __repr__(self):
-        return "ReversoContextAPI({source_text!r}, {target_text!r}, {source_lang!r}, {target_lang!r})" \
-            .format(**self.__data)
+    def __repr__(self) -> str:
+        return ("ReversoContextAPI({0.source_text!r}, {0.target_text!r}, "
+                "{0.source_lang!r}, {0.target_lang!r})").format(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
+        # TODO: refactor the code below
         if isinstance(other, ReversoContextAPI):
             return self.source_text == other.source_text \
                    and self.target_text == other.target_text \
@@ -114,7 +178,7 @@ class ReversoContextAPI(object):
                    and self.target_lang == other.target_lang
         return False
 
-    def get_translations(self):
+    def get_translations(self) -> Generator[Translation, None, None]:
         """Yields all available translations for the word (on the website you can find it just before the examples).
 
         Yields:
@@ -122,28 +186,37 @@ class ReversoContextAPI(object):
 
         """
 
-        translations_json = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
-                                          data=json.dumps(self.__data)).json()["dictionary_entry_list"]
-        for translation in translations_json:
-            yield Translation(self.__data["source_text"], translation["term"], translation["alignFreq"],
-                              translation["pos"],
-                              [InflectedForm(form["term"], form["alignFreq"]) for form in
-                               translation["inflectedForms"]])
+        response = requests.post("https://context.reverso.net/bst-query-service",
+                                 headers=HEADERS,
+                                 data=json.dumps(self.__data))
+        translations_json = response.json()["dictionary_entry_list"]
 
-    def get_examples(self):
+        for translation_json in translations_json:
+            translation = translation_json["term"]
+            frequency = translation_json["alignFreq"]
+            part_of_speech = translation_json["pos"]
+            
+            inflected_forms = tuple(InflectedForm(form["term"], form["alignFreq"])
+                                    for form in translation_json["inflectedForms"])
+            
+            yield Translation(self.__data["source_text"],
+                              translation, frequency, part_of_speech,
+                              inflected_forms)
+
+    def get_examples(self) -> Generator[tuple, None, None]:
         """A generator that gets words' usage examples pairs from server pair by pair.
 
         Note:
-            Don't try to get all usage examples at one time if there are more than 5 pages (see the page_count attribute). It
+            Don't try to get all usage examples at one time if there are more than 5 pages (see the total_pages attribute). It
             may take a long time to complete because it will be necessary to connect to the server as many times as there are pages exist.
             Just get the usage examples one by one as they are being fetched.
 
         Yields:
-            Tuples with two WordUsageExample namedtuples (for source and target text and highlighted indexes)
+            Tuples with two WordUsageContext namedtuples (for source and target text and highlighted indexes)
 
         """
 
-        def find_highlighted_idxs(soup, tag="em"):
+        def find_highlighted_idxs(soup, tag="em") -> tuple:
             """Finds indexes of the parts of the soup surrounded by a particular HTML tag
             relatively to the soup without the tag.
 
@@ -162,19 +235,28 @@ class ReversoContextAPI(object):
 
             """
 
+            # source: https://stackoverflow.com/a/62027247/8661764
+
             cur, idxs = 0, []
             for t in soup.find_all(text=True):
                 if t.parent.name == tag:
                     idxs.append((cur, cur + len(t)))
                 cur += len(t)
-            return idxs
+            return tuple(idxs)
 
-        for npage in range(1, self.page_count + 1):
+        for npage in range(1, self.total_pages + 1):
             self.__data["npage"] = npage
-            examples_json = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
-                                          data=json.dumps(self.__data)).json()["list"]
-            for word in examples_json:
-                source = BeautifulSoup(word["s_text"], features="lxml")
-                target = BeautifulSoup(word["t_text"], features="lxml")
-                yield (WordUsageExample(source.text, find_highlighted_idxs(source)),
-                       WordUsageExample(target.text, find_highlighted_idxs(target)))
+
+            response = requests.post("https://context.reverso.net/bst-query-service",
+                                     headers=HEADERS,
+                                     data=json.dumps(self.__data))
+            examples_json = response.json()["list"]
+
+            for example in examples_json:
+                source = BeautifulSoup(example["s_text"], features="lxml")
+                target = BeautifulSoup(example["t_text"], features="lxml")
+                yield (WordUsageContext(source.text, find_highlighted_idxs(source)),
+                       WordUsageContext(target.text, find_highlighted_idxs(target)))
+                
+    def swap_langs(self) -> None:
+        self.__source_lang, self.__target_lang = self.target_lang, self.source_lang

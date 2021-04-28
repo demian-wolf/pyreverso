@@ -8,7 +8,7 @@ setuptools.setup(
     name="Reverso_API",
     version="0.0.1.beta.3",
     license="MIT",
-    author="Demian Wolf",
+    author="Demian Volkov",
     author_email="demianwolfssd@gmail.com",
     description="Reverso.net API for Python",
     long_description=long_description,

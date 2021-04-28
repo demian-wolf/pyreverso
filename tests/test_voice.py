@@ -42,8 +42,8 @@ class TestReversoVoiceAPI(unittest.TestCase):
             with contextlib.redirect_stdout(None):
                 import pygame
         except ImportError:
-            print("\n.say(...) method cannot be checked without pygame. Install it first.")
-            return
+            raise ImportError("\n.say(...) method cannot be checked without pygame."
+                              "Install it first.")
         for voice in [voices["US English"][0], "Heather22k"]:
             self.api.say(wait=True)
         self.assertTrue(ask("Have you heard the voice, played 2 times?"))

@@ -1,6 +1,6 @@
-"""Mini-version of Reverso Context with command-line interface."""
+"""Mini-version of Reverso context with command-line interface."""
 
-from reverso_api.context import ReversoContextAPI
+from reverso_api import ReversoContextAPI
 
 
 def highlight_example(text, highlighted):
@@ -81,10 +81,12 @@ for source_word, translation, frequency, part_of_speech, inflected_forms in api.
     print("Frequency (how many word usage examples contain this word):", frequency)
     print("Part of speech:", part_of_speech if part_of_speech else "unknown")
     if inflected_forms:
-        print("Inflected forms:", ", ".join(map(lambda iform: str(iform.translation), inflected_forms)))
+        print("Inflected forms:", end=" ")
+        print(", ".join(inflected_form.translation for inflected_form in inflected_forms))
     print()
 
 print()
 print("Word Usage Examples:")
 for source, target in api.get_examples():
-    print(highlight_example(*source), "==", highlight_example(*target))
+    print(highlight_example(source.text, source.highlighted), "==",
+          highlight_example(target.text, target.highlighted))

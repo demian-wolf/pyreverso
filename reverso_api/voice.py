@@ -1,27 +1,18 @@
 """Reverso Voice (voice.reverso.net) API for Python"""
 
-from collections import namedtuple, defaultdict
-import contextlib
 import base64
-import json
+import contextlib
 import io
+from collections import namedtuple, defaultdict
 
 import requests
 
-
-__all__ = ["ReversoVoiceAPI", "Voice", "get_voices"]
+__all__ = ["ReversoVoiceAPI", "Voice"]
 
 BASE_URL = "https://voice.reverso.net/RestPronunciation.svc/v1/output=json/"
 
 Voice = namedtuple("Voice", ("name", "language", "gender"))
 
-def get_voices():
-    _voices = defaultdict(list)
-    for voice in json.loads(requests.get(BASE_URL + "GetAvailableVoices").content)["Voices"]:
-        language_name = voice["Language"]
-        _voices[language_name].append(
-            Voice(voice["Name"], (int(voice["LangCode"]), language_name), voice["Gender"]))
-    return dict(_voices)
 
 class ReversoVoiceAPI:
     """Class for Reverso Voice API (https://voice.reverso.net/)
@@ -39,12 +30,29 @@ class ReversoVoiceAPI:
     """
 
     def __init__(self, text, voice, speed=100):
+        self.__voices = self.__get_voices()  # TODO: make a frozen dict
         self.__voice_names = [voice.name
-                               for _, voices_list in get_voices().items()
-                               for voice in voices_list]
+                              for voices in self.__voices.values()
+                              for voice in voices]
+
         self.__text, self.__voice, self.__speed = None, None, None
         self.text, self.voice, self.speed = text, voice, speed
-    
+
+    @staticmethod
+    def __get_voices():
+        voices = defaultdict(list)
+
+        response = requests.get(BASE_URL + "GetAvailableVoices")
+
+        voices_json = response.json()
+        for voice_json in voices_json["Voices"]:
+            language_name = voice_json["Language"]
+            name, langcode, gender = voice_json["Name"], int(voice_json["LangCode"]), voice_json["Gender"]
+            voice = Voice(name, (langcode, language_name), gender)
+            voices[language_name].append(voice)
+
+        return dict(voices)
+
     @property
     def text(self):
         return self.__text
@@ -60,10 +68,17 @@ class ReversoVoiceAPI:
     @property
     def mp3_data(self):
         if self.__info_modified:
-            self.__mp3_data = requests.get(BASE_URL + "GetVoiceStream/voiceName={}?voiceSpeed={}&inputText={}".format(self.voice, self.speed, base64.b64encode(self.text.encode()).decode())).content
+            self.__mp3_data = requests.get(
+                BASE_URL + "GetVoiceStream/voiceName={}?voiceSpeed={}&inputText={}".format(self.voice, self.speed,
+                                                                                           base64.b64encode(
+                                                                                               self.text.encode()).decode())).content
             self.__info_modified = False
         return self.__mp3_data
-    
+
+    @property
+    def voices(self):
+        return self.__voices
+
     @text.setter
     def text(self, value):
         assert isinstance(value, str), "text must be a string"
@@ -84,7 +99,6 @@ class ReversoVoiceAPI:
         assert 30 <= value <= 300, "speed must be 30 <= speed <= 300"
         self.__speed = value
         self.__info_modified = True
-        
 
     def write_to_file(self, file):
         """Writes the spoken phrase to an MP3 file. You can specify either a filename-string or a file-like object.

@@ -33,7 +33,7 @@ class ReversoContextAPI(object):
         source_lang
         target_lang
         total_pages
-    
+
     Methods:
         get_translations()
         get_examples()
@@ -51,7 +51,7 @@ class ReversoContextAPI(object):
         self.__total_pages = None
 
         # FIXME: make self.supported_langs read-only
-        self.supported_langs = self.__fetch_supported_langs()
+        self.supported_langs = self.__get_supported_langs()
 
         self.source_text, self.target_text = source_text, target_text
         self.source_lang, self.target_lang = source_lang, target_lang
@@ -65,7 +65,8 @@ class ReversoContextAPI(object):
             return self.__data == other._ReversoContextAPI__data
         return False
 
-    def __fetch_supported_langs(self) -> dict:
+    @staticmethod
+    def __get_supported_langs() -> dict:
         supported_langs = {}
 
         response = requests.get("https://context.reverso.net/translation/",
@@ -126,13 +127,13 @@ class ReversoContextAPI(object):
         return self.__total_pages
 
     def get_translations(self) -> Generator[Translation, None, None]:
-        """Yields all available translations for the word
-        On the Reverso.Context website, it looks like a row
-        with words/short phrases just before the examples.
+        """
+        Yields all available translations for the word.
+
+        While viewing Reverso.Context in a web browser, you can see them in a line just before the examples.
 
         Yields:
              Translation namedtuples.
-
         """
 
         response = requests.post("https://context.reverso.net/bst-query-service",

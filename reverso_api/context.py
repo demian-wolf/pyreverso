@@ -61,9 +61,13 @@ class ReversoContextAPI(object):
                 "{0.source_lang!r}, {0.target_lang!r})").format(self)
 
     def __eq__(self, other) -> bool:
-        if isinstance(other, ReversoContextAPI):
-            return self.__data == other._ReversoContextAPI__data
-        return False
+        if not isinstance(other, ReversoContextAPI):
+            return False
+
+        for attr in ("source_text", "target_text", "source_lang", "target_lang"):
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+        return True
 
     @staticmethod
     def __get_supported_langs() -> dict:
@@ -118,8 +122,8 @@ class ReversoContextAPI(object):
                     total_pages = int(total_pages)
                 except ValueError:
                     raise ValueError('"npages" in the response cannot be interpreted as an integer')
-                if total_pages < 0:
-                    raise ValueError('"npages" in the response is a negative number')
+            if total_pages < 0:
+                raise ValueError('"npages" in the response is a negative number')
 
             self.__total_pages = total_pages
             self.__data_ismodified = False
@@ -223,7 +227,7 @@ class ReversoContextAPI(object):
         value = str(value)
 
         if value not in self.supported_langs["source_lang"]:
-            raise ValueError(f'"{value}" source language is not supported')
+            raise ValueError(f"{value!r} source language is not supported")
 
         if value == self.source_lang:
             raise ValueError(f"source language cannot be equal to the target language")
@@ -236,7 +240,7 @@ class ReversoContextAPI(object):
         value = str(value)
 
         if value not in self.supported_langs["target_lang"]:
-            raise ValueError(f'"{value}" target language is not supported')
+            raise ValueError(f"{value!r} target language is not supported")
 
         if value == self.source_lang:
             raise ValueError(f"target language cannot be equal to the source language")

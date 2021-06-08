@@ -31,6 +31,29 @@ class TestReversoContextAPI(unittest.TestCase):
 
         pass
 
+    def test__eq(self):
+        """
+        Tests the equality of ReversoContextAPI instances (ReversoContextAPI.__eq__).
+
+        -- tests the equality of instances with different source text
+        -- tests the equality of instances with the same attributes after .__data["npages"] was modified
+        """
+
+        api2 = ReversoContextAPI(source_text="hello",
+                                 source_lang="en",
+                                 target_lang="ru")
+        api3 = ReversoContextAPI(source_text="Github",
+                                 source_lang="en",
+                                 target_lang="ru")
+
+        self.assertFalse(api2 == api3)
+        self.assertTrue(self.api == api3)
+
+        # .__data["npages"] was modified in both self.api and api3
+        next(self.api.get_examples())
+        next(api3.get_examples())
+        self.assertTrue(self.api == api3)
+
     def test__get_examples(self):
         """Tests the ReversoContextAPI.get_examples() method.
 

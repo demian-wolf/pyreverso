@@ -44,11 +44,11 @@ class ReversoContextAPI(object):
                  source_text="пример",
                  target_text="",
                  source_lang="ru",
-                 target_lang="en"):
+                 target_lang="en") -> None:
 
         self.__data = dict.fromkeys(("source_text", "target_text", "source_lang", "target_lang"))
-        self.__data_ismodified = True
         self.__total_pages = None
+        self.__data_ismodified = True
 
         # FIXME: make self.supported_langs read-only
         self.supported_langs = self.__get_supported_langs()
@@ -167,7 +167,6 @@ class ReversoContextAPI(object):
 
         Yields:
             Tuples with two WordUsageContext namedtuples (for source and target text and highlighted indexes)
-
         """
 
         def find_highlighted_idxs(soup, tag="em") -> tuple:

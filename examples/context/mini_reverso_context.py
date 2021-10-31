@@ -1,4 +1,4 @@
-"""Mini-version of Reverso context with command-line interface."""
+"""Mini-version of Reverso Context with command-line interface."""
 
 from reverso_api import ReversoContextAPI
 

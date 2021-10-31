@@ -7,7 +7,7 @@ from pprint import pprint
 import random
 
 
-print("Reverso.Voice API usage example")
+print("Reverso.voice API usage example")
 
 print()
 api = ReversoVoiceAPI()

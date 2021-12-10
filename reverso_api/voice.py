@@ -9,6 +9,8 @@ import requests
 
 __all__ = ["ReversoVoiceAPI", "Voice"]
 
+HEADERS = {"User-Agent": "Mozilla/5.0"}
+
 BASE_URL = "https://voice.reverso.net/RestPronunciation.svc/v1/output=json/"
 
 Voice = namedtuple("Voice", ("name", "language", "gender"))
@@ -42,7 +44,7 @@ class ReversoVoiceAPI:
     def __get_voices():
         voices = defaultdict(list)
 
-        response = requests.get(BASE_URL + "GetAvailableVoices")
+        response = requests.get(BASE_URL + "GetAvailableVoices", headers=HEADERS)
 
         voices_json = response.json()
         for voice_json in voices_json["Voices"]:
@@ -71,7 +73,7 @@ class ReversoVoiceAPI:
             self.__mp3_data = requests.get(
                 BASE_URL + "GetVoiceStream/voiceName={}?voiceSpeed={}&inputText={}".format(self.voice, self.speed,
                                                                                            base64.b64encode(
-                                                                                               self.text.encode()).decode())).content
+                                                                                               self.text.encode()).decode()), headers=HEADERS).content
             self.__info_modified = False
         return self.__mp3_data
 

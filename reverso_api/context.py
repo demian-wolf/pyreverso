@@ -130,6 +130,25 @@ class ReversoContextAPI(object):
 
         return self.__total_pages
 
+    def translate_sentence(self):
+        url = "https://api.reverso.net/translate/v1/translation"
+
+        data = {
+            "format": "text",
+            "from": self.source_lang,
+            "input": self.source_text,
+            "options": {
+                "contextResults": True,
+                "languageDetection": True,
+                "origin": "translation.web",
+                "sentenceSplitter": False
+            },
+            "to": self.target_lang
+        }
+
+        translations_json = requests.post(url, headers=HEADERS,data=json.dumps(data)).json()
+        return translations_json["translation"][0]
+    
     def get_translations(self) -> Generator[Translation, None, None]:
         """
         Yields all available translations for the word.

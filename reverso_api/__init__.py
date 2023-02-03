@@ -2,7 +2,7 @@
 
 from .context import *
 from .voice import *
-
+from .conjugation import *
 
 __author__ = "Demian Volkov"
 __copyright__ = "Copyright 2020-2021, Demian Volkov"

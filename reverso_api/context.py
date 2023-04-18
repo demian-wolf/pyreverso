@@ -5,6 +5,7 @@ from collections import namedtuple
 from typing import Generator
 
 import requests
+from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
 
 __all__ = ["ReversoContextAPI", "WordUsageContext", "Translation", "InflectedForm"]
@@ -21,6 +22,19 @@ Translation = namedtuple("Translation",
 
 InflectedForm = namedtuple("InflectedForm",
                            ("translation", "frequency"))
+
+class TimeoutHTTPAdapter(HTTPAdapter):
+    def __init__(self, *args, **kwargs):
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
+            del kwargs["timeout"]
+        super().__init__(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        timeout = kwargs.get("timeout")
+        if timeout is None and hasattr(self, "timeout"):
+            kwargs["timeout"] = self.timeout
+        return super().send(request, **kwargs)
 
 
 class ReversoContextAPI(object):
@@ -44,11 +58,27 @@ class ReversoContextAPI(object):
                  source_text="пример",
                  target_text="",
                  source_lang="ru",
-                 target_lang="en") -> None:
+                 target_lang="en",
+                 timeout=None) -> None:
 
         self.__data = dict.fromkeys(("source_text", "target_text", "source_lang", "target_lang"))
         self.__total_pages = None
         self.__data_ismodified = True
+
+        self.session = requests.Session()
+        # Timeout to prevent hanging
+        if timeout is not None:
+            self.session.mount('http://', TimeoutHTTPAdapter(timeout=timeout))
+            self.session.mount('https://', TimeoutHTTPAdapter(timeout=timeout))
+
+        # Do retries
+        retries = Retry(
+            total=5,
+            backoff_factor=0.1,
+            status_forcelist=[ 500, 502, 503, 504 ]
+        )
+        self.session.mount('http://', HTTPAdapter(max_retries=retries))
+        self.session.mount('https://', HTTPAdapter(max_retries=retries))
 
         # FIXME: make self.supported_langs read-only
         self.supported_langs = self.__get_supported_langs()
@@ -69,12 +99,12 @@ class ReversoContextAPI(object):
                 return False
         return True
 
-    @staticmethod
-    def __get_supported_langs() -> dict:
+    def __get_supported_langs(self) -> dict:
         supported_langs = {}
 
-        response = requests.get("https://context.reverso.net/translation/",
-                                headers=HEADERS)
+        response = self.session.get(
+            "https://context.reverso.net/translation/", headers=HEADERS
+        )
 
         soup = BeautifulSoup(response.content, features="lxml")
 
@@ -111,9 +141,9 @@ class ReversoContextAPI(object):
     @property
     def total_pages(self) -> int:
         if self.__data_ismodified:
-            response = requests.post("https://context.reverso.net/bst-query-service",
-                                     headers=HEADERS,
-                                     data=json.dumps(self.__data))
+            response = self.session.post("https://context.reverso.net/bst-query-service",
+                                          headers=HEADERS,
+                                          data=json.dumps(self.__data))
 
             total_pages = response.json()["npages"]
 
@@ -140,9 +170,9 @@ class ReversoContextAPI(object):
              Translation namedtuples.
         """
 
-        response = requests.post("https://context.reverso.net/bst-query-service",
-                                 headers=HEADERS,
-                                 data=json.dumps(self.__data))
+        response = self.session.post("https://context.reverso.net/bst-query-service",
+                                     headers=HEADERS,
+                                     data=json.dumps(self.__data))
         translations_json = response.json()["dictionary_entry_list"]
 
         for translation_json in translations_json:
@@ -200,9 +230,9 @@ class ReversoContextAPI(object):
         for npage in range(1, self.total_pages + 1):
             self.__data["npage"] = npage
 
-            response = requests.post("https://context.reverso.net/bst-query-service",
-                                     headers=HEADERS,
-                                     data=json.dumps(self.__data))
+            response = self.session.post("https://context.reverso.net/bst-query-service",
+                                         headers=HEADERS,
+                                         data=json.dumps(self.__data))
             examples_json = response.json()["list"]
 
             for example in examples_json:
